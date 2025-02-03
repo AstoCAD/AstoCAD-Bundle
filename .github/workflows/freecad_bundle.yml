@@ -1,10 +1,7 @@
 name: freecad_bundle
 on:
   schedule:
-   - cron: "0 23 * * 1,5"
-  push:
-    branches:
-      - "*"
+   - cron: "0 1 * * 3"
   pull_request:
     branches:
       - main
@@ -22,16 +19,16 @@ jobs:
         include:
           - os: windows-latest
             bundle_dir: conda/win
-            asset_pattern: FreeCAD_.*Windows-x86_64
+            asset_pattern: AstoCAD_.*Windows-x86_64
           - os: macos-13
             bundle_dir: conda/osx
-            asset_pattern: FreeCAD_.*macOS-x86_64
+            asset_pattern: AstoCAD_.*macOS-x86_64
           - os: macos-latest
             bundle_dir: conda/osx
-            asset_pattern: FreeCAD_.*macOS-arm64
+            asset_pattern: AstoCAD_.*macOS-arm64
           - os: ubuntu-latest
             bundle_dir: conda/linux
-            asset_pattern: FreeCAD_.*Linux-x86_64
+            asset_pattern: AstoCAD_.*Linux-x86_64
 
     steps:
       - if: matrix.os == 'windows-latest'
@@ -92,8 +89,8 @@ jobs:
         name: Upload binaries to release and remove old ones
         working-directory: ${{ matrix.bundle_dir }}
         env:
-          TARGET_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: AstoCAD/assets
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DEPLOY_RELEASE: ${{ matrix.tag }}
           ASSET_PATTERN: ${{ matrix.asset_pattern }}
         shell: bash
@@ -104,7 +101,7 @@ jobs:
           OLD_ASSETS=$(gh release view -R "$TARGET_REPO" "$DEPLOY_RELEASE" --json assets \
             --jq ".assets[].name" | grep "$ASSET_PATTERN" | grep -vF $version_name || true; )
           # upload new assets
-          find . -type f -name "FreeCAD_*" -exec gh release upload --clobber -R "$TARGET_REPO" "$DEPLOY_RELEASE" {} \;
+          find . -type f -name "AstoCAD_*" -exec gh release upload --clobber -R "$TARGET_REPO" "$DEPLOY_RELEASE" {} \;
           # remove old assets if upload was successful
           if [ -n "$OLD_ASSETS" ]; then
             while IFS= read -r asset; do

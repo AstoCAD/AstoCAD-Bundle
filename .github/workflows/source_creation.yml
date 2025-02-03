@@ -5,7 +5,7 @@ name: source_creation
 # Controls when the workflow will run
 on:
   schedule:
-   - cron: "0 0/6 * * *"
+   - cron: "0 20 * * 2"
 
   workflow_dispatch:
 
@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: create source package with submodules and version info
         run: |
-          git clone https://github.com/FreeCAD/FreeCAD
+          git clone https://github.com/${GITHUB_REPOSITORY_OWNER}/FreeCAD
           touch freecad_version.txt
           wget https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF##*/}/make_version_file.py
           wget https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_REF##*/}/disable_git_info.patch
@@ -43,7 +43,8 @@ jobs:
       - name: Upload source package to release
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_name: AstoCAD/FreeCAD
+          repo_token: ${{ secrets.GH_TOKEN_FC }}
           file: freecad*
           tag: ${{ matrix.tag }}
           overwrite: true

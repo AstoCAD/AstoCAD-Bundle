@@ -1,12 +1,12 @@
 # assume we have a working conda available
 
-conda_env="APP/FreeCAD.app/Contents/Resources"
+conda_env="APP/AstoCAD.app/Contents/Resources"
 
 mkdir -p $(dirname ${conda_env})
 
-mamba create -y --copy -c freecad/label/dev -c conda-forge -p ${conda_env} \
+mamba create -y --copy -c AstoCAD/label/dev -c freecad/label/dev -c conda-forge -p ${conda_env} \
     python=3.11 \
-    freecad[*dev] \
+    astocad[*dev] \
     noqt6 \
     blas=*=openblas \
     blinker \
@@ -39,6 +39,8 @@ rm -rf ${conda_env}/include
 find ${conda_env} -name \*.a -delete
 mv ${conda_env}/bin ${conda_env}/bin_tmp
 mkdir ${conda_env}/bin
+cp ${conda_env}/bin_tmp/astocad ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/astocadcmd ${conda_env}/bin
 cp ${conda_env}/bin_tmp/freecad ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/freecadcmd ${conda_env}/bin
 cp ${conda_env}/bin_tmp/ccx ${conda_env}/bin/
@@ -48,6 +50,7 @@ cp ${conda_env}/bin_tmp/pyside2-rcc ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/gmsh ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/dot ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/unflatten ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/branding.xml "${conda_env}"/bin/
 sed -i "" '1s|.*|#!/usr/bin/env python|' ${conda_env}/bin/pip
 rm -rf ${conda_env}/bin_tmp
 
@@ -80,8 +83,11 @@ echo -e "\################"
 echo -e "version_name:  ${version_name}"
 echo -e "################"
 
-mamba list -p ${conda_env} > APP/FreeCAD.app/Contents/packages.txt
-sed -i "" "1s/.*/\nLIST OF PACKAGES:/"  APP/FreeCAD.app/Contents/packages.txt
+echo -e "\nInstall additional addons"
+mamba run -p "${conda_env}" python ../scripts/install_addons.py "${conda_env}"
+
+mamba list -p "${conda_env}" > "APP/AstoCAD.app/Contents/packages.txt"
+sed -i "" "1s/.*/\nLIST OF PACKAGES:/"  "APP/AstoCAD.app/Contents/packages.txt"
 
 # copy the plugin into its final location
 mv ${conda_env}/Library ${conda_env}/../Library
