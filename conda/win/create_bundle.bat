@@ -5,7 +5,7 @@ mkdir %copy_dir%
 
 call mamba create ^
  -p %conda_env% ^
- freecad[*dev] ^
+ astocad[*dev] ^
  python=3.11 ^
  noqt6 ^
  blinker ^
@@ -32,6 +32,7 @@ call mamba create ^
  vtk ^
  xlutils ^
  --copy ^
+ -c AstoCAD/label/dev ^
  -c freecad/label/dev ^
  -c conda-forge ^
  -y
@@ -44,6 +45,8 @@ echo **********************
 echo %freecad_version_name%
 echo **********************
 
+echo "Install additional addons"
+%conda_env%\python ../scripts/install_addons.py %conda_env%
 
 REM remove arm binaries that fail to extract unless using latest 7zip
 for /r %conda_env% %%i in (*arm*.exe) do (@echo "%%i will be removed" & @del "%%i")
@@ -71,6 +74,9 @@ REM get all the dependency .dlls
 robocopy %conda_env%\Library\bin *.dll %copy_dir%\bin /XF *.pdb /XF api*.* /MT:%NUMBER_OF_PROCESSORS% > nul
 REM Copy FreeCAD build
 robocopy %conda_env%\Library\bin FreeCAD* %copy_dir%\bin /XF *.pdb /MT:%NUMBER_OF_PROCESSORS% > nul
+robocopy %conda_env%\Library\bin AstoCAD* %copy_dir%\bin /XF *.pdb /MT:%NUMBER_OF_PROCESSORS% > nul
+robocopy %conda_env%\Library\bin %copy_dir%\bin\ branding.xml /MT:%NUMBER_OF_PROCESSORS% > nul
+robocopy %conda_env%\Library\share\Gui %copy_dir%\share\Gui /S /MT:%NUMBER_OF_PROCESSORS% > nul
 robocopy %conda_env%\Library\data %copy_dir%\data /XF *.txt /S /MT:%NUMBER_OF_PROCESSORS% > nul
 robocopy %conda_env%\Library\Ext %copy_dir%\Ext /S /XD __pycache__ /MT:%NUMBER_OF_PROCESSORS% > nul
 robocopy %conda_env%\Library\lib %copy_dir%\lib /XF *.lib /XF *.prl /XF *.sh /MT:%NUMBER_OF_PROCESSORS% > nul

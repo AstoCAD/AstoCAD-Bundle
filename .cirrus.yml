@@ -1,6 +1,7 @@
 linux_task:
     # Basic metadata:
     name: appimage-bundle
+    trigger_type: manual
 
     # The build machine:
     compute_engine_instance:
@@ -12,9 +13,9 @@ linux_task:
     # Environment variables:
     env:
       DEBIAN_FRONTEND: noninteractive
-      ASSET_PATTERN: FreeCAD_.*Linux-aarch64
+      ASSET_PATTERN: AstoCAD_.*Linux-aarch64
       DEPLOY_RELEASE: weekly-builds
-      TARGET_REPO: $CIRRUS_REPO_FULL_NAME
+      TARGET_REPO: AstoCAD/assets
 
     # Instructions:
     bundle_script: |
@@ -40,7 +41,7 @@ linux_task:
       OLD_ASSETS=$(gh release view -R "$TARGET_REPO" "$DEPLOY_RELEASE" --json assets \
         --jq ".assets[].name" | grep "$ASSET_PATTERN" | grep -vF $version_name || true; )
       # upload new assets
-      find . -type f -name "FreeCAD_*" -exec gh release upload --clobber -R "$TARGET_REPO" "$DEPLOY_RELEASE" {} \;
+      find . -type f -name "AstoCAD_*" -exec gh release upload --clobber -R "$TARGET_REPO" "$DEPLOY_RELEASE" {} \;
       # remove old assets if upload was successful
       if [ -n "$OLD_ASSETS" ]; then
         while IFS= read -r asset; do
