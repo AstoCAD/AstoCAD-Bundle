@@ -8,9 +8,10 @@ conda_env="AppDir/usr"
 echo -e "\nCreate the environment"
 
 mamba create --copy -y -p ${conda_env} \
+  -c AstoCAD/label/dev \
   -c freecad/label/dev \
   -c conda-forge \
-  freecad[*dev] \
+  astocad[*dev] \
   python=3.11 \
   noqt6 \
   appimage-updater-bridge \
@@ -45,8 +46,8 @@ echo -e "\################"
 echo -e "version_name:  ${version_name}"
 echo -e "################"
 
-echo -e "\nInstall freecad.appimage_updater"
-mamba run -p ${conda_env} pip install https://github.com/looooo/freecad.appimage_updater/archive/master.zip
+echo -e "\nInstall additional addons"
+mamba run -p ${conda_env} python ../scripts/install_addons.py ${conda_env}
 
 mamba list -p ${conda_env} > AppDir/packages.txt
 sed -i "1s/.*/\nLIST OF PACKAGES:/" AppDir/packages.txt
@@ -56,6 +57,8 @@ rm -rf ${conda_env}/include
 find ${conda_env} -name \*.a -delete
 mv ${conda_env}/bin ${conda_env}/bin_tmp
 mkdir ${conda_env}/bin
+cp ${conda_env}/bin_tmp/AstoCAD ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/AstoCADcmd ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/freecad ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/freecadcmd ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/ccx ${conda_env}/bin/
@@ -65,6 +68,7 @@ cp ${conda_env}/bin_tmp/pyside2-rcc ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/gmsh ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/dot ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/unflatten ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/branding.xml ${conda_env}/bin/
 sed -i '1s|.*|#!/usr/bin/env python|' ${conda_env}/bin/pip
 rm -rf ${conda_env}/bin_tmp
 
@@ -73,9 +77,9 @@ cp qt.conf ${conda_env}/bin/
 cp qt.conf ${conda_env}/libexec/
 
 echo -e "\nCopying Icon and Desktop file"
-cp ${conda_env}/share/applications/org.freecad.FreeCAD.desktop AppDir/
-sed -i 's/Exec=FreeCAD/Exec=AppRun/g' AppDir/org.freecad.FreeCAD.desktop
-cp ${conda_env}/share/icons/hicolor/scalable/apps/org.freecad.FreeCAD.svg AppDir/
+cp ${conda_env}/share/applications/com.astocad.desktop AppDir/
+sed -i 's/Exec=FreeCAD/Exec=AppRun/g' AppDir/com.astocad.desktop
+cp ${conda_env}/share/icons/hicolor/scalable/apps/AstoCAD.svg AppDir/
 
 
 # Remove __pycache__ folders and .pyc files
@@ -98,11 +102,13 @@ else
 fi
 
 echo -e "\nCreate the appimage"
+if [ "$ARCH" = "aarch64" ]; then
+  export ARCH=arm_aarch64
+fi
 export GPG_TTY=$(tty)
 chmod a+x ./AppDir/AppRun
 ../../appimagetool-$(uname -m).AppImage \
   --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 22 \
-  -u "gh-releases-zsync|FreeCAD|FreeCAD-Bundle|$tag|FreeCAD*$ARCH*.AppImage.zsync" \
   -s --sign-key ${GPG_KEY_ID} AppDir ${version_name}.AppImage
 
 echo -e "\nCreate hash"
