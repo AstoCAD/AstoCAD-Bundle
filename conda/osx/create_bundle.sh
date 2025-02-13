@@ -1,6 +1,6 @@
 # assume we have a working conda available
 
-conda_env="APP/FreeCAD.app/Contents/Resources"
+conda_env="APP/AstoCAD.app/Contents/Resources"
 
 mkdir -p $(dirname ${conda_env})
 
@@ -73,8 +73,8 @@ mamba run -p ${conda_env} python ../scripts/fix_macos_lib_paths.py ${conda_env}/
 # build and install the launcher
 cmake -B build launcher
 cmake --build build
-mkdir -p APP/FreeCAD.app/Contents/MacOS
-cp build/FreeCAD APP/FreeCAD.app/Contents/MacOS/FreeCAD
+mkdir -p APP/AstoCAD.app/Contents/MacOS
+cp build/AstoCAD APP/AstoCAD.app/Contents/MacOS/AstoCAD
 
 mamba run -p ${conda_env} python ../scripts/get_freecad_version.py
 read -r version_name < bundle_name.txt
@@ -94,7 +94,7 @@ mv ${conda_env}/Library ${conda_env}/../Library
 
 # create the dmg
 pip3 install --break-system-packages "dmgbuild[badge_icons]>=1.6.0,<1.7.0"
-dmgbuild -s dmg_settings.py "FreeCAD" "${version_name}.dmg"
+dmgbuild -s dmg_settings.py "AstoCAD" "${version_name}.dmg"
 
 # create hash
 shasum -a 256 ${version_name}.dmg > ${version_name}.dmg-SHA256.txt
