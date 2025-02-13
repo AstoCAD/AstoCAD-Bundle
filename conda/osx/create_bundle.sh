@@ -1,6 +1,6 @@
 # assume we have a working conda available
 
-conda_env="APP/AstoCAD.app/Contents/Resources"
+conda_env="APP/FreeCAD.app/Contents/Resources"
 
 mkdir -p $(dirname ${conda_env})
 
