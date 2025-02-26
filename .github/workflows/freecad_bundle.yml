@@ -1,10 +1,7 @@
 name: freecad_bundle
 on:
   schedule:
-   - cron: "0 23 * * 1,5"
-  push:
-    branches:
-      - "*"
+   - cron: "0 1 * * 3"
   pull_request:
     branches:
       - main
@@ -22,16 +19,16 @@ jobs:
         include:
           - os: windows-latest
             bundle_dir: conda/win
-            asset_pattern: FreeCAD_.*Windows-x86_64
+            asset_pattern: AstoCAD_.*Windows-x86_64
           - os: macos-13
             bundle_dir: conda/osx
-            asset_pattern: FreeCAD_.*macOS-x86_64
+            asset_pattern: AstoCAD_.*macOS-x86_64
           - os: macos-latest
             bundle_dir: conda/osx
-            asset_pattern: FreeCAD_.*macOS-arm64
+            asset_pattern: AstoCAD_.*macOS-arm64
           - os: ubuntu-latest
             bundle_dir: conda/linux
-            asset_pattern: FreeCAD_.*Linux-x86_64
+            asset_pattern: AstoCAD_.*Linux-x86_64
 
     steps:
       - if: matrix.os == 'windows-latest'
@@ -57,7 +54,7 @@ jobs:
 
       - if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request'
         name: import GPG key
-        run: echo -e $GPG_KEY | gpg --batch --import
+        run: echo "$GPG_KEY" | base64 --decode | gpg --batch --import
         env:
           GPG_KEY: ${{ secrets.GPG_KEY }}
 
@@ -89,25 +86,54 @@ jobs:
             DEPLOY_RELEASE: ${{ matrix.tag }}
 
       - if: (github.event_name != 'pull_request')
-        name: Upload binaries to release and remove old ones
+        name: Upload binaries to AstoCAD server
         working-directory: ${{ matrix.bundle_dir }}
         env:
-          TARGET_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOY_RELEASE: ${{ matrix.tag }}
-          ASSET_PATTERN: ${{ matrix.asset_pattern }}
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         shell: bash
         run: |
-          # store list of existing assets before upload
-          # exclude files with the same name as new ones
-          version_name=$(cat bundle_name.txt)
-          OLD_ASSETS=$(gh release view -R "$TARGET_REPO" "$DEPLOY_RELEASE" --json assets \
-            --jq ".assets[].name" | grep "$ASSET_PATTERN" | grep -vF $version_name || true; )
-          # upload new assets
-          find . -type f -name "FreeCAD_*" -exec gh release upload --clobber -R "$TARGET_REPO" "$DEPLOY_RELEASE" {} \;
-          # remove old assets if upload was successful
-          if [ -n "$OLD_ASSETS" ]; then
-            while IFS= read -r asset; do
-              gh release delete-asset -y -R "$TARGET_REPO" "$DEPLOY_RELEASE" "$asset"
-            done <<< "$OLD_ASSETS"
+          # Install lftp for each OS
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update -qq && sudo apt-get install -y lftp;
+            FILE_PATTERN="AstoCAD_*.AppImage AstoCAD_*.txt";
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install lftp;
+            FILE_PATTERN="AstoCAD_*.dmg AstoCAD_*.txt";
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
+           # Find and upload files individually
+           find . -maxdepth 1 -name 'AstoCAD_*.7z' -o -name 'AstoCAD_*.txt' | while read -r file; do
+             filename=$(basename "$file")
+             echo "Uploading $filename"
+             powershell -Command "
+               try {
+                 \$ftpUri = 'ftp://${{ secrets.FTP_HOST }}/www/builds/$filename'
+                 \$ftpRequest = [System.Net.FtpWebRequest]::Create(\$ftpUri)
+                 \$ftpRequest.Credentials = New-Object System.Net.NetworkCredential('${{ secrets.FTP_USER }}', '${{ secrets.FTP_PASSWORD }}')
+                 \$ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
+                 \$ftpRequest.UseBinary = \$true
+                 \$ftpRequest.KeepAlive = \$false
+ 
+                 \$fileStream = [System.IO.File]::OpenRead('$file')
+                 \$ftpStream = \$ftpRequest.GetRequestStream()
+                 \$fileStream.CopyTo(\$ftpStream)
+                 Write-Host 'Successfully uploaded $filename'
+               } finally {
+                 if (\$null -ne \$fileStream) { \$fileStream.Close() }
+                 if (\$null -ne \$ftpStream) { \$ftpStream.Close() }
+               }
+             " || exit 1
+           done
+           exit 0
+          fi
+
+          if [[ "$RUNNER_OS" == "Linux" || "$RUNNER_OS" == "macOS" ]]; then
+            lftp -e "
+            open $FTP_HOST;
+            user $FTP_USER $FTP_PASSWORD;
+            cd /www/builds/;
+            mput $FILE_PATTERN;
+            bye
+            "
           fi

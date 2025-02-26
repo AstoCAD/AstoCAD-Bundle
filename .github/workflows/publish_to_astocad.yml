@@ -1,0 +1,39 @@
+name: publish to AstoCAD
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name of the release'
+        required: false
+        default: 'weekly-builds'
+
+jobs:
+  publish_to_astocad:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download assets from release
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        mkdir -p downloaded-assets
+        gh release download --repo AstoCAD/assets ${{ github.event.inputs.tag_name }} --dir ./downloaded-assets
+        ls -l ./downloaded-assets
+
+    - name: Upload to FTP server
+      env:
+        FTP_HOST: ${{ secrets.FTP_HOST }}
+        FTP_USER: ${{ secrets.FTP_USER }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        sudo apt-get install -y lftp
+        lftp -e "
+          open $FTP_HOST;
+          user $FTP_USER $FTP_PASSWORD;
+          mirror -R downloaded-assets /www/builds/;
+          bye
+        "

@@ -15,10 +15,17 @@ arch = platform.machine()
 if arch == "AMD64":
     arch = "x86_64"
 
-if "ARCH" in os.environ:
-    if os.environ["ARCH"] != "":
-        arch = os.environ["ARCH"]
-
+# mac users are not used to common procesor architecture names
+# use a more consumer friendly name
+if system == "macOS":
+    if arch == "x86_64":
+        arch = "-intel"
+        mac_arch_str = "i386"
+    elif arch == "arm64":
+        arch =  "-arm"
+        mac_arch_str = "arm64"
+else:
+    arch = "" # lets just not show that as there only 1 build anyway.
 
 python_version = platform.python_version().split(".")
 python_version = "py" + python_version[0] + python_version[1]
@@ -36,19 +43,20 @@ if system == "macOS":
     with open(os.path.join(osx_directory, "Info.plist.template")) as template_file:
         template_str = template_file.read()
     template = jinja2.Template(template_str)
-    rendered_str = template.render( FREECAD_VERSION="{}-{}".format(dev_version, revision), 
-                                    APPLICATION_MENU_NAME="FreeCAD-{}-{}".format(dev_version, revision) )
-    with open(os.path.join(osx_directory, "APP", "FreeCAD.app", "Contents", "Info.plist"), "w") as rendered_file:
+    rendered_str = template.render( FREECAD_VERSION=dev_version, 
+                                    APPLICATION_MENU_NAME="AstoCAD {}".format(dev_version),
+                                    ARCHITECTURE=mac_arch_str )
+    with open(os.path.join(osx_directory, "APP", "AstoCAD.app", "Contents", "Info.plist"), "w") as rendered_file:
         rendered_file.write(rendered_str)
 
 if "DEPLOY_RELEASE" in os.environ and os.environ["DEPLOY_RELEASE"] == "weekly-builds":
-    dev_version = "weekly-builds"
-    revision_separator = "-"
-else:
+    dev_version = ""
     revision_separator = ""
-    revision = ""
+else:
+    revision_separator = "."
+    #revision = ""
 
-bundle_name = f"FreeCAD_{dev_version}{revision_separator}{revision}-{package_manager}-{system}-{arch}-{python_version}"
+bundle_name = f"AstoCAD_{dev_version}{revision_separator}{revision}-{system}{arch}"
 
 with open("bundle_name.txt", "w") as bundle_name_file:
     bundle_name_file.write(bundle_name)
