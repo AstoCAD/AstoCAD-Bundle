@@ -2,15 +2,16 @@
 
 set -x
 
-conda_env="APP/FreeCAD.app/Contents/Resources"
+conda_env="APP/AstoCAD.app/Contents/Resources"
 
 mkdir -p $(dirname ${conda_env})
 
 mamba create --copy -p ${conda_env} \
+  -c AstoCAD/label/dev \
   -c freecad/label/dev \
   -c conda-forge \
   python=3.11 \
-  freecad[*dev] \
+  astocad[*dev] \
   noqt5 \
   blas=*=openblas \
   blinker \
@@ -44,6 +45,8 @@ rm -rf ${conda_env}/include
 find ${conda_env} -name \*.a -delete
 mv ${conda_env}/bin ${conda_env}/bin_tmp
 mkdir ${conda_env}/bin
+cp ${conda_env}/bin_tmp/AstoCAD ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/AstoCADcmd ${conda_env}/bin
 cp ${conda_env}/bin_tmp/freecad ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/freecadcmd ${conda_env}/bin
 cp ${conda_env}/bin_tmp/ccx ${conda_env}/bin/
@@ -53,6 +56,7 @@ cp ${conda_env}/bin_tmp/pyside6-rcc ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/gmsh ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/dot ${conda_env}/bin/
 cp ${conda_env}/bin_tmp/unflatten ${conda_env}/bin/
+cp ${conda_env}/bin_tmp/branding.xml "${conda_env}"/bin/
 sed -i "" '1s|.*|#!/usr/bin/env python|' ${conda_env}/bin/pip
 rm -rf ${conda_env}/bin_tmp
 
@@ -71,8 +75,8 @@ mamba run -p ${conda_env} python ../scripts/fix_macos_lib_paths.py ${conda_env}/
 # build and install the launcher
 cmake -B build launcher
 cmake --build build
-mkdir -p APP/FreeCAD.app/Contents/MacOS
-cp build/FreeCAD APP/FreeCAD.app/Contents/MacOS/FreeCAD
+mkdir -p APP/AstoCAD.app/Contents/MacOS
+cp build/AstoCAD APP/AstoCAD.app/Contents/MacOS/AstoCAD
 
 mamba run -p ${conda_env} python ../scripts/get_freecad_version.py
 read -r version_name < bundle_name.txt
@@ -81,15 +85,18 @@ echo -e "\################"
 echo -e "version_name:  ${version_name}"
 echo -e "################"
 
-mamba list -p ${conda_env} > APP/FreeCAD.app/Contents/packages.txt
-sed -i "" "1s/.*/\nLIST OF PACKAGES:/"  APP/FreeCAD.app/Contents/packages.txt
+echo -e "\nInstall additional addons"
+mamba run -p "${conda_env}" python ../scripts/install_addons.py "${conda_env}"
+
+mamba list -p "${conda_env}" > "APP/AstoCAD.app/Contents/packages.txt"
+sed -i "" "1s/.*/\nLIST OF PACKAGES:/"  "APP/AstoCAD.app/Contents/packages.txt"
 
 # copy the plugin into its final location
 mv ${conda_env}/Library ${conda_env}/../Library
 
 # create the dmg
 pip3 install --break-system-packages "dmgbuild[badge_icons]>=1.6.0,<1.7.0"
-dmgbuild -s dmg_settings.py "FreeCAD" "${version_name}.dmg"
+dmgbuild -s dmg_settings.py "AstoCAD" "${version_name}.dmg"
 
 # create hash
 shasum -a 256 ${version_name}.dmg > ${version_name}.dmg-SHA256.txt
