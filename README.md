@@ -16,3 +16,4 @@
 [^2]: https://github.com/FreeCAD/FreeCAD/issues
 [^3]: https://snapcraft.io/freecad
 [^4]: https://flathub.org/apps/org.freecadweb.FreeCAD
+ 
